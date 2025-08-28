@@ -1,0 +1,398 @@
+/* Base Styles */
+html {
+    overflow-x: hidden;
+}
+
+body {
+    color: rgb(102, 104, 105) !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: rgb(248, 249, 250);
+    margin: 0;
+    padding: 0;
+}
+
+/* Navigation Styles */
+.navbar {
+    border-bottom: 1px solid rgb(233, 229, 229);
+    background-color: white !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.search {
+    width: 1000px;
+    border-radius: 10px;
+    border: 1px solid rgb(220, 220, 220);
+}
+
+.sidenav {
+    border-right: 1px solid rgb(233, 229, 229);
+    padding: 0px;
+    background-color: white;
+}
+
+.main-row {
+    height: 97vh;
+    overflow: hidden;
+}
+
+.main-body {
+    padding: 0px;
+    background-color: rgb(248, 249, 250);
+    position: relative;
+}
+
+.mid-content {
+    position: absolute;
+    left: 0px;
+    right: 0px;
+    top: 80px;
+    bottom: 0px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 20px;
+}
+
+/* Section Containers */
+.section-container {
+    max-width: 1200px;
+    margin: 0 auto 30px auto;
+    padding: 0 20px;
+}
+
+/* Overview Section */
+.overview-card {
+    background-color: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.section-title {
+    color: rgb(64, 64, 64);
+    font-size: 24px;
+    font-weight: 600;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.overview-text {
+    font-size: 16px;
+    line-height: 1.6;
+    text-align: center;
+    color: rgb(102, 104, 105);
+    margin: 0;
+}
+
+/* Statistics Section */
+.stats-title {
+    color: rgb(64, 64, 64);
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    background-color: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.stat-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+}
+
+.stat-card:not(:last-child) {
+    border-right: 1px solid rgb(220, 220, 220);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    position: relative;
+}
+
+.stat-number {
+    font-size: 28px;
+    font-weight: 700;
+    color: rgb(64, 64, 64);
+    margin: 10px 0 5px 0;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: rgb(102, 104, 105);
+    font-weight: 500;
+    margin: 0;
+    letter-spacing: 0.5px;
+}
+
+/* Icon Backgrounds */
+.back-mean {
+    background-color: rgb(167, 200, 243) !important;
+}
+
+.back-std {
+    background-color: rgb(200, 240, 204) !important;
+}
+
+.back-min {
+    background-color: rgb(248, 201, 240) !important;
+}
+
+.back-max {
+    background-color: rgb(212, 190, 229) !important;
+}
+
+/* Icon Styles */
+.calculator, .graph-up, .arrow-down, .arrow-up {
+    font-size: 24px;
+}
+
+.calculator {
+    color: rgb(4, 86, 194);
+}
+
+.graph-up {
+    color: rgb(7, 163, 33);
+}
+
+.arrow-down {
+    color: rgb(230, 7, 192);
+}
+
+.arrow-up {
+    color: rgb(72, 5, 134);
+}
+
+/* Charts Layout */
+.charts-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.viz-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.chart-column {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.chart-container {
+    background-color: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.chart-container canvas {
+    max-width: 100%;
+    height: auto !important;
+}
+
+/* Table Styles */
+.table-container {
+    background-color: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+.table-title {
+    background-color: rgb(248, 249, 250);
+    padding: 15px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgb(64, 64, 64);
+}
+
+.table-headers th {
+    background-color: rgb(248, 249, 250);
+    padding: 12px;
+    text-align: center;
+    font-weight: 600;
+    border-bottom: 2px solid rgb(220, 220, 220);
+}
+
+.year-col {
+    color: rgb(241, 89, 183) !important;
+}
+
+.inflation-col {
+    color: rgb(9, 152, 209) !important;
+}
+
+.gdp-col {
+    color: rgb(137, 67, 165) !important;
+}
+
+.data-table tbody tr {
+    border-bottom: 1px solid rgb(240, 240, 240);
+}
+
+.data-table tbody tr:hover {
+    background-color: rgb(252, 252, 252);
+}
+
+.data-table th[scope="row"] {
+    background-color: rgb(248, 249, 250);
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: rgb(64, 64, 64);
+}
+
+.data-table td {
+    padding: 12px;
+    text-align: center;
+    color: rgb(102, 104, 105);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .section-container {
+        max-width: 100%;
+        padding: 0 15px;
+    }
+    
+    .charts-row,
+    .viz-row {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card:not(:last-child) {
+        border-right: none;
+        border-bottom: 1px solid rgb(220, 220, 220);
+        padding-bottom: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .chart-container {
+        padding: 20px;
+    }
+    
+    .overview-card {
+        padding: 20px;
+    }
+    
+    .section-title {
+        font-size: 20px;
+    }
+    
+    .stat-number {
+        font-size: 24px;
+    }
+}
+
+@media (max-width: 480px) {
+    .mid-content {
+        padding: 10px;
+    }
+    
+    .chart-container {
+        padding: 15px;
+    }
+    
+    .overview-card {
+        padding: 15px;
+    }
+    
+    .stats-grid {
+        padding: 20px;
+    }
+}
+
+/* Animation and Hover Effects */
+.stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+}
+
+.chart-container {
+    transition: box-shadow 0.2s ease;
+}
+
+.chart-container:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+.overview-card {
+    transition: box-shadow 0.2s ease;
+}
+
+.overview-card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Utility Classes */
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.mb-0 {
+    margin-bottom: 0;
+}
+
+.mt-0 {
+    margin-top: 0;
+}
+.heading{
+    margin-top: 10px;
+}
+.barfill{
+    color: rgb(97, 170, 238) !important;
+    margin-left: 20px;
+}

@@ -117,3 +117,28 @@ html[data-theme="dark"] .modal{background:rgba(0,0,0,.55)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .story-body p{margin:0 0 8px 0}
 .figcap{margin-top:8px;font-size:13px;color:var(--muted)}
+
+/* === Reference look & feel tweaks === */
+.h1{font-size:26px;margin:0 0 4px 0}
+.h3{margin:0}
+
+:root{
+  --line-blue:#60a5fa;      /* light blue */
+  --line-pink:#f472b6;      /* light pink/magenta */
+  --bar-blue:#2563eb;       /* deeper bar blue (inflation) */
+}
+
+/* tighten canvases a bit */
+canvas{display:block}
+
+/* card headings spacing */
+.card-head .muted{font-size:12px}
+
+/* chart legend text color follows theme */
+.chartjs-render-monitor{outline:none}
+
+/* table look */
+.table thead th{background:transparent}
+
+/* hero button spacing on narrow */
+@media (max-width:740px){ .hero .btnrow{justify-content:flex-start} }

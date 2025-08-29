@@ -6,7 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{% block title %}Data Analysis{% endblock %}</title>
 
-  <!-- Start in LIGHT (your preference) -->
+  <!-- Start in LIGHT -->
   <script>
   (function () {
     try {
@@ -18,14 +18,14 @@
   })();
   </script>
 
-  <!-- Inter (professional, variable) -->
+  <!-- Inter -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300..900&display=swap" rel="stylesheet" />
 
   <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
 
-  <!-- Charts + Plugins (zoom + annotation) -->
+  <!-- Charts + Plugins -->
   <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -45,10 +45,6 @@
       <a href="{% url 'analysis:database' %}" class="navlink">Database</a>
       <a href="/admin/" class="navlink">Admin</a>
       <button id="datasetBtn" class="btn">Datasets</button>
-      <select id="unitSelect" class="input">
-        <option value="raw">Raw</option>
-        <option value="zar_b">Rand (billions)</option>
-      </select>
       <button id="resetZoom" class="btn ghost">Reset Zoom</button>
       <button id="themeToggle" class="btn ghost" aria-pressed="false" title="Toggle theme" aria-label="Toggle theme">🌓</button>
     </nav>

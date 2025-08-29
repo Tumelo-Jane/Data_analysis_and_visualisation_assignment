@@ -1,93 +1,158 @@
+# analysis/views.py
 from __future__ import annotations
+
 import csv
 import math
-import statistics
 import os
+import statistics
 from pathlib import Path
-from typing import Dict, List, Optional
-from django.http import JsonResponse, HttpRequest, HttpResponse
+from typing import Dict, List, Optional, Tuple
+
+from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import render
 
-# ========= PATHS (robust resolution to your python_analytics/datasets) =========
-# views.py path: ...\data_analysis_project\data_analysis\analysis\views.py
+# ---------------- Paths (robust) ----------------
 HERE = Path(__file__).resolve()
-# Go up to the assignment root: ...\Data_analysis_and_visualisation_assignment
-ASSIGNMENT_ROOT = HERE.parents[3]
 
-# Allow explicit override via env var if you ever want it:
+ASSIGNMENT_ROOT_CANDIDATES = [HERE.parents[4], HERE.parents[3]]
 ENV_DATASETS = os.environ.get("DA_DATASETS", "")
 
-CANDIDATES = [
-    # Your real location (relative to assignment root)
-    ASSIGNMENT_ROOT / "python_analytics" / "datasets",
-    # Common alternates:
-    HERE.parents[2] / "datasets",                          # ...\data_analysis_project\data_analysis\datasets
-    HERE.parents[3] / "datasets",                          # ...\data_analysis_project\datasets
+CANDIDATES: List[Optional[Path]] = [
+    *(p / "python_analytics" / "datasets" for p in ASSIGNMENT_ROOT_CANDIDATES if p),
+    HERE.parents[2] / "datasets",  # …/data_analysis/analysis/../datasets
+    HERE.parents[3] / "datasets",  # …/data_analysis/../datasets
     Path(ENV_DATASETS) if ENV_DATASETS else None,
-    # Absolute fallback you told me (kept last; OK to remove later)
-    Path(r"C:\Users\Admin.DESKTOP-UD6VIR4\Desktop\Data Anlysis and Visualization Assignment\Data_analysis_and_visualisation_assignment\python_analytics\datasets"),
 ]
 
 DATA_DIR = next((p for p in CANDIDATES if p and p.exists()), None)
 if not DATA_DIR:
-    # Fail loudly so you see the exact places it looked
     raise FileNotFoundError(
-        "Could not locate datasets folder. Tried:\n" +
-        "\n".join(str(p) for p in CANDIDATES if p)
+        "Datasets folder not found. Tried:\n" + "\n".join(str(p) for p in CANDIDATES if p)
     )
 
 COUNTRY = "South Africa"
 GDP_FILE = DATA_DIR / "GDP.csv"
 INFL_FILE = DATA_DIR / "Inflation1.csv"
 
-# ==================== helpers ====================
+# ---------------- Helpers ----------------
 def _is_year(k: str) -> bool:
     return k.isdigit() and 1900 <= int(k) <= 2100
 
-def _to_float(x: str) -> Optional[float]:
+def _to_float(x) -> Optional[float]:
     try:
-        if x is None or x == "":
+        if x is None:
             return None
-        return float(x)
+        s = str(x).strip()
+        if s == "" or s.lower() == "nan":
+            return None
+        s = s.replace(" ", "").replace(",", "")  # support "12,345.6"
+        return float(s)
     except Exception:
         return None
 
-def load_country_series(path: Path, country_name: str):
+def _norm(s: Optional[str]) -> str:
+    return (s or "").strip().lower()
+
+def _empty_meta(name: str) -> Dict:
+    return {
+        "name": name,
+        "row_count": 0,
+        "year_min": None,
+        "year_max": None,
+        "non_null_points": 0,
+        "null_points": 0,
+        "columns_preview": [],
+    }
+
+# ---- auto-detect WIDE vs LONG and extract series ----
+def load_country_series(path: Path, country_name: str) -> Tuple[List[int], List[Optional[float]], Dict]:
     """
-    Reads a wide CSV where columns are years and a row is the country.
-    Returns (years, values, meta) with years sorted and values aligned.
+    Returns (years:int[], values:float|None[], meta:dict)
+    Supports:
+      - WIDE: one row per country; year columns like '1990','1991',...
+      - LONG: columns like Year/TIME_PERIOD + Value/OBS_VALUE (+ optional country)
     """
     if not path.exists():
-        return [], [], {
-            "name": path.name, "row_count": 0, "year_min": None, "year_max": None,
-            "non_null_points": 0, "null_points": 0, "columns_preview": []
-        }
+        return [], [], _empty_meta(path.name)
 
     with path.open(newline="", encoding="utf-8") as f:
         reader = csv.DictReader(f)
-        for row in reader:
-            cname = row.get("REF_AREA_NAME") or row.get("Country")
-            if cname and cname.strip().lower() == country_name.lower():
-                year_keys = [int(k) for k in row.keys() if _is_year(k)]
-                year_keys.sort()
-                vals = [_to_float(row[str(y)]) for y in year_keys]
-                non_null = sum(1 for v in vals if v is not None)
-                meta = {
-                    "name": path.name,
-                    "row_count": non_null,
-                    "year_min": year_keys[0] if year_keys else None,
-                    "year_max": year_keys[-1] if year_keys else None,
-                    "non_null_points": non_null,
-                    "null_points": len(vals) - non_null,
-                    "columns_preview": [c for c in (reader.fieldnames or []) if not _is_year(c)][:4]
-                                       + [str(y) for y in year_keys[:6]],
-                }
-                return year_keys, vals, meta
+        if not reader.fieldnames:
+            return [], [], _empty_meta(path.name)
+        fields = [c.strip() for c in reader.fieldnames]
+        rows = list(reader)
 
-    return [], [], {
-        "name": path.name, "row_count": 0, "year_min": None, "year_max": None,
-        "non_null_points": 0, "null_points": 0, "columns_preview": []
+    year_cols = [c for c in fields if _is_year(c)]
+    country_cols = ["REF_AREA_NAME", "Country", "Country Name", "Country_Name", "REF_AREA"]
+    time_cols = ["TIME_PERIOD", "Year", "YEAR", "time_period", "year"]
+    value_cols = ["OBS_VALUE", "Value", "VALUE", "obs_value", "value"]
+
+    # ---------- WIDE ----------
+    if len(year_cols) >= 2:
+        ccol = next((c for c in country_cols if c in fields), None)
+        hit_row = None
+        if ccol:
+            for row in rows:
+                if _norm(row.get(ccol)) == _norm(country_name):
+                    hit_row = row
+                    break
+        else:
+            hit_row = rows[0] if rows else None
+
+        if not hit_row:
+            return [], [], _empty_meta(path.name)
+
+        years = sorted(int(y) for y in year_cols)
+        vals = [_to_float(hit_row.get(str(y))) for y in years]
+        non_null = sum(1 for v in vals if v is not None)
+        meta = {
+            "name": path.name,
+            "row_count": non_null,
+            "year_min": years[0] if years else None,
+            "year_max": years[-1] if years else None,
+            "non_null_points": non_null,
+            "null_points": len(vals) - non_null,
+            "columns_preview": ([ccol] if ccol else []) + [str(y) for y in years[:6]],
+        }
+        return years, vals, meta
+
+    # ---------- LONG ----------
+    tcol = next((c for c in time_cols if c in fields), None)
+    vcol = next((c for c in value_cols if c in fields), None)
+    ccol = next((c for c in country_cols if c in fields), None)
+
+    if not (tcol and vcol):
+        return [], [], _empty_meta(path.name)
+
+    if ccol:
+        rows = [r for r in rows if _norm(r.get(ccol)) == _norm(country_name)]
+
+    by_year: Dict[int, Optional[float]] = {}
+    for r in rows:
+        y_raw = r.get(tcol)
+        if y_raw is None:
+            continue
+        try:
+            y = int(str(y_raw).strip()[:4])  # handle "1990-01-01"
+        except Exception:
+            continue
+        v = _to_float(r.get(vcol))
+        if v is not None:
+            by_year[y] = v
+
+    years = sorted(by_year.keys())
+    vals = [by_year[y] for y in years]
+    non_null = sum(1 for v in vals if v is not None)
+    meta = {
+        "name": path.name,
+        "row_count": non_null,
+        "year_min": years[0] if years else None,
+        "year_max": years[-1] if years else None,
+        "non_null_points": non_null,
+        "null_points": len(vals) - non_null,
+        "columns_preview": [c for c in ([ccol] if ccol else [])] + [tcol, vcol],
     }
+    return years, vals, meta
 
 def align_overlap(yrs_a, vals_a, yrs_b, vals_b):
     a = {y: v for y, v in zip(yrs_a, vals_a) if v is not None}
@@ -139,6 +204,24 @@ def rolling_std(arr: List[float], w: int) -> List[float]:
         seg = arr[i - w + 1 : i + 1]
         out.append(statistics.pstdev(seg))
     return out
+# --- Add under the other helpers ---
+def preview_rows(path: Path, country_name: str, limit: int = 10):
+    """Return first N (year, value) rows (non-null) for a given country."""
+    years, vals, _ = load_country_series(path, country_name)
+    rows = [{"year": y, "value": v} for y, v in zip(years, vals) if v is not None]
+    return rows[:max(0, int(limit))]
+
+# --- Add near the other views ---
+def preview_api(request: HttpRequest) -> JsonResponse:
+    kind = (request.GET.get("kind") or "").lower()
+    limit = int(request.GET.get("limit") or 10)
+    if kind not in {"gdp", "inflation"}:
+        return JsonResponse({"ok": False, "error": "kind must be 'gdp' or 'inflation'"}, status=400)
+
+    path = GDP_FILE if kind == "gdp" else INFL_FILE
+    rows = preview_rows(path, COUNTRY, limit=limit)
+    return JsonResponse({"ok": True, "rows": rows})
+
 
 def hist_counts(arr: List[float], bins: int = 10):
     if not arr:
@@ -153,45 +236,81 @@ def hist_counts(arr: List[float], bins: int = 10):
         if v == hi:
             counts[-1] += 1
         else:
-            idx = int((v - lo) / step)
-            counts[idx] += 1
+            counts[int((v - lo) / step)] += 1
     centers = [(edges[i] + edges[i + 1]) / 2 for i in range(bins)]
     return centers, counts
 
-# ==================== views ====================
+# ---------------- Templates ----------------
 def dashboard(request: HttpRequest) -> HttpResponse:
     return render(request, "analysis/dashboard.html", {})
 
 def database(request: HttpRequest) -> HttpResponse:
     return render(request, "analysis/database.html", {})
 
+# ---------------- APIs ----------------
 def metrics_api(request: HttpRequest) -> JsonResponse:
     yrs_gdp, val_gdp, meta_gdp = load_country_series(GDP_FILE, COUNTRY)
     yrs_infl, val_infl, meta_infl = load_country_series(INFL_FILE, COUNTRY)
 
     solo_g_years = [y for y, v in zip(yrs_gdp, val_gdp) if v is not None]
-    solo_g_vals  = [v for v in val_gdp if v is not None]
+    solo_g_vals = [v for v in val_gdp if v is not None]
     solo_i_years = [y for y, v in zip(yrs_infl, val_infl) if v is not None]
-    solo_i_vals  = [v for v in val_infl if v is not None]
+    solo_i_vals = [v for v in val_infl if v is not None]
 
     years, gdp, infl = align_overlap(yrs_gdp, val_gdp, yrs_infl, val_infl)
 
     infl_mean = mean_safe(infl)
-    infl_std  = float(statistics.pstdev(infl)) if len(infl) > 1 else 0.0
-    infl_min  = min(infl) if infl else 0.0
-    infl_max  = max(infl) if infl else 0.0
-    gdp_max   = max(gdp) if gdp else 0.0
+    infl_std = float(statistics.pstdev(infl)) if len(infl) > 1 else 0.0
+    infl_min = min(infl) if infl else 0.0
+    infl_max = max(infl) if infl else 0.0
 
-    c = corr(infl, gdp)
-    m, b = linreg(infl, gdp)
-    x_min = min(infl) if infl else 0.0
-    x_max = max(infl) if infl else 0.0
+    gdp_mean = mean_safe(gdp)
+    gdp_std = float(statistics.pstdev(gdp)) if len(gdp) > 1 else 0.0
+    gdp_min = min(gdp) if gdp else 0.0
+    gdp_max = max(gdp) if gdp else 0.0
 
-    yoy_gdp = [gdp[i] - gdp[i - 1] for i in range(1, len(gdp))]
+    r = corr(gdp, infl)
+
     yoy_years = years[1:] if years else []
+    yoy_gdp = [gdp[i] - gdp[i - 1] for i in range(1, len(gdp))]
+    yoy_infl = [infl[i] - infl[i - 1] for i in range(1, len(infl))]
     pos = sum(1 for v in yoy_gdp if v > 0)
     neg = sum(1 for v in yoy_gdp if v < 0)
     zero = sum(1 for v in yoy_gdp if v == 0)
+
+    pre_mask = [y <= 1993 for y in years]
+    post_mask = [y >= 1994 for y in years]
+    def pick(arr, mask): return [v for v, m in zip(arr, mask) if m]
+    g_pre, g_post = pick(gdp, pre_mask), pick(gdp, post_mask)
+    i_pre, i_post = pick(infl, pre_mask), pick(infl, post_mask)
+    def std_safe(a): return float(statistics.pstdev(a)) if len(a) > 1 else 0.0
+
+    apartheid = {
+        "means": {
+            "gdp_pre": mean_safe(g_pre),
+            "gdp_post": mean_safe(g_post),
+            "infl_pre": mean_safe(i_pre),
+            "infl_post": mean_safe(i_post),
+        },
+        "std": {
+            "gdp_pre": std_safe(g_pre),
+            "gdp_post": std_safe(g_post),
+            "infl_pre": std_safe(i_pre),
+            "infl_post": std_safe(i_post),
+        },
+        "counts": {"pre_years": len(g_pre), "post_years": len(g_post)},
+    }
+
+    best_gdp_idx = int(gdp.index(max(gdp))) if gdp else 0
+    worst_gdp_idx = int(gdp.index(min(gdp))) if gdp else 0
+    best_inf_idx = int(infl.index(min(infl))) if infl else 0
+    worst_inf_idx = int(infl.index(max(infl))) if infl else 0
+    extremes = {
+        "best_gdp": {"year": years[best_gdp_idx] if years else None, "value": gdp[best_gdp_idx] if gdp else 0.0},
+        "worst_gdp": {"year": years[worst_gdp_idx] if years else None, "value": gdp[worst_gdp_idx] if gdp else 0.0},
+        "best_infl": {"year": years[best_inf_idx] if years else None, "value": infl[best_inf_idx] if infl else 0.0},
+        "worst_infl": {"year": years[worst_inf_idx] if years else None, "value": infl[worst_inf_idx] if infl else 0.0},
+    }
 
     by_dec: Dict[str, Dict[str, List[float]]] = {}
     for y, g, i in zip(years, gdp, infl):
@@ -211,26 +330,24 @@ def metrics_api(request: HttpRequest) -> JsonResponse:
 
     hist_centers, hist_counts_ = hist_counts(solo_i_vals, bins=10)
 
-    # simple cumulative “from first year” path
-    cum = []
-    if gdp:
-        base = gdp[0]
-        acc = 0.0
-        for v in gdp:
-            acc += (v - base)
-            cum.append(acc)
+    cum: List[float] = []
+    acc = 0.0
+    for v in gdp:
+        acc += v
+        cum.append(acc)
+
+    m, b = linreg(infl, gdp)
+    x_min = min(infl) if infl else 0.0
+    x_max = max(infl) if infl else 0.0
 
     payload = {
         "ok": True,
         "meta": {
             "datasets": {"gdp": meta_gdp, "inflation": meta_infl},
             "coverage": {
-                "gdp": {"min": solo_g_years[0] if solo_g_years else None,
-                        "max": solo_g_years[-1] if solo_g_years else None},
-                "inflation": {"min": solo_i_years[0] if solo_i_years else None,
-                              "max": solo_i_years[-1] if solo_i_years else None},
-                "both": {"min": years[0] if years else None,
-                         "max": years[-1] if years else None},
+                "gdp": {"min": solo_g_years[0] if solo_g_years else None, "max": solo_g_years[-1] if solo_g_years else None},
+                "inflation": {"min": solo_i_years[0] if solo_i_years else None, "max": solo_i_years[-1] if solo_i_years else None},
+                "both": {"min": years[0] if years else None, "max": years[-1] if years else None},
             },
         },
         "kpi": {
@@ -240,30 +357,51 @@ def metrics_api(request: HttpRequest) -> JsonResponse:
             "inflation_std": infl_std,
             "inflation_min": infl_min,
             "inflation_max": infl_max,
+            "gdp_mean": gdp_mean,
+            "gdp_std": gdp_std,
+            "gdp_min": gdp_min,
             "gdp_max": gdp_max,
-            "corr_gdp_inflation": c,
+            "corr_gdp_inflation": r,
         },
         "series": {"years": years, "gdp": gdp, "inflation": infl},
-        "solo": {
-            "gdp": {"years": solo_g_years, "values": solo_g_vals},
-            "infl": {"years": solo_i_years, "values": solo_i_vals},
-        },
-        "yoy": {
-            "years": yoy_years,
-            "gdp": yoy_gdp,
-            "summary": {"positive": pos, "negative": neg, "zero": zero},
-            "inflation": [solo_i_vals[i] - solo_i_vals[i - 1] for i in range(1, len(solo_i_vals))]
-                          if len(solo_i_vals) > 1 else [],
-        },
+        "yoy": {"years": yoy_years, "gdp": yoy_gdp, "inflation": yoy_infl, "summary": {"positive": pos, "negative": neg, "zero": zero}},
         "decades": {"labels": dec_labels, "gdp_mean": dec_g_mean, "infl_mean": dec_i_mean},
-        "rolling": {
-            "window": window,
-            "years": roll_years,
-            "gdp_ma": roll_gdp_ma,
-            "infl_ma": roll_infl_ma,
-            "infl_std": roll_infl_std,
-        },
+        "rolling": {"window": window, "years": roll_years, "gdp_ma": roll_gdp_ma, "infl_ma": roll_infl_ma, "infl_std": roll_infl_std},
         "extra": {"infl_hist_centers": hist_centers, "infl_hist_counts": hist_counts_, "cum_gdp": cum},
         "regression": {"slope": m, "intercept": b, "x_min": x_min, "x_max": x_max},
+        "apartheid": apartheid,
+        "extremes": extremes,
     }
     return JsonResponse(payload)
+
+def datasets_list_api(request: HttpRequest) -> JsonResponse:
+    # Small helper if you want a list endpoint too
+    return JsonResponse({
+        "ok": True,
+        "datasets": [
+            {"key": "gdp", "title": "GDP (South Africa)", "file": GDP_FILE.name},
+            {"key": "inflation", "title": "Inflation (South Africa)", "file": INFL_FILE.name},
+        ],
+    })
+
+def dataset_api(request: HttpRequest) -> JsonResponse:
+    """
+    ?name=gdp|inflation&limit=20
+    Returns meta + a small (year,value) preview for the selected dataset.
+    """
+    name = (request.GET.get("name") or "gdp").lower()
+    limit = int(request.GET.get("limit") or 20)
+    if name not in ("gdp", "inflation"):
+        return JsonResponse({"ok": False, "error": "Unknown dataset"}, status=400)
+
+    path = GDP_FILE if name == "gdp" else INFL_FILE
+    years, values, meta = load_country_series(path, COUNTRY)
+    rows = [{"year": y, "value": v} for y, v in zip(years, values) if v is not None][:limit]
+    return JsonResponse({
+        "ok": True,
+        "name": name,
+        "title": "GDP (South Africa)" if name == "gdp" else "Inflation (South Africa)",
+        "meta": meta,
+        "columns": ["year", "value"],
+        "rows": rows,
+    })

@@ -1,175 +1,127 @@
 {% extends "analysis/base.html" %}
-{% block title %}Dashboard • Data Analysis{% endblock %}
+{% load static %}
+{% block title %}South Africa: GDP & Inflation{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <div>
-    <h1>South Africa: GDP & Inflation</h1>
-    <p class="muted">A simple, guided view with context around the 1994 democratic transition.</p>
+  <!-- HERO -->
+  <section class="hero card">
+    <div>
+      <h1 class="h1">South Africa: GDP & Inflation</h1>
+      <p class="muted">A guided, visual summary with clean charts and key facts (1994 marked with a dashed line when in range).</p>
+    </div>
     <div class="btnrow">
-      <button class="btn outline" id="reload">Reload data</button>
+      <button id="reload" class="btn">Reload data</button>
+      <label class="check"><input type="checkbox" id="showGDP" checked /> GDP</label>
+      <label class="check"><input type="checkbox" id="showInfl" checked /> Inflation</label>
+      <button id="resetZoom" class="btn ghost">Reset Zoom</button>
+      <button id="datasetBtn" class="btn">Datasets</button>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- Narrative / Findings -->
-<section class="card story" id="storyCard">
-  <header class="card-head"><h3>What the data shows</h3></header>
-  <div id="storyContent" class="story-body">
-    <!-- JS fills this with a short, plain-English summary based on the data you loaded -->
-  </div>
-  <p class="note muted">The vertical dashed line (when visible) marks <strong>1994</strong> — end of apartheid, start of democratic rule.</p>
-</section>
+  <!-- KPI GRID -->
+  <section class="grid-4">
+    <div class="card kpi">
+      <div class="kpi-top"><div class="kpi-label">Records</div><span class="kpi-dot"></span></div>
+      <div class="kpi-value" id="kpiRecords">0</div>
+      <div class="kpi-foot">Rows after merge</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-top"><div class="kpi-label">Unique Years</div><span class="kpi-dot"></span></div>
+      <div class="kpi-value" id="kpiCategories">0</div>
+      <div class="kpi-foot">Time coverage</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-top"><div class="kpi-label">Avg Inflation</div><span class="kpi-dot"></span></div>
+      <div class="kpi-value"><span id="kpiAvg">0</span><span class="muted">%</span></div>
+      <div class="kpi-foot">Long-run mean</div>
+    </div>
+    <div class="card kpi">
+      <div class="kpi-top"><div class="kpi-label">Max GDP</div><span class="kpi-dot"></span></div>
+      <div class="kpi-value" id="kpiMax">0</div>
+      <div class="kpi-foot">Peak yearly value</div>
+    </div>
+  </section>
 
-<!-- KPIs -->
-<section class="grid-4 kpis">
-  <article class="card kpi">
-    <div class="kpi-top"><span class="kpi-label">Records</span><span class="kpi-dot"></span></div>
-    <div class="kpi-value" id="kpiRecords">0</div>
-    <div class="kpi-foot muted">Rows after merge</div>
-  </article>
-  <article class="card kpi">
-    <div class="kpi-top"><span class="kpi-label">Unique Years</span><span class="kpi-dot"></span></div>
-    <div class="kpi-value" id="kpiCategories">0</div>
-    <div class="kpi-foot muted">Time coverage</div>
-  </article>
-  <article class="card kpi">
-    <div class="kpi-top"><span class="kpi-label">Avg Inflation</span><span class="kpi-dot"></span></div>
-    <div class="kpi-value" id="kpiAvg">0</div>
-    <div class="kpi-foot muted">Percent</div>
-  </article>
-  <article class="card kpi">
-    <div class="kpi-top"><span class="kpi-label">Max GDP</span><span class="kpi-dot"></span></div>
-    <div class="kpi-value" id="kpiMax">0</div>
-    <div class="kpi-foot muted">Absolute</div>
-  </article>
-</section>
+  <!-- FINDINGS / STORY -->
+  <section class="card">
+    <h3 class="h3">What the data shows</h3>
+    <div id="storyContent" class="story-body"></div>
+  </section>
 
-<!-- Charts -->
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>GDP over Time</h3><div class="muted">Line</div></header>
-    <figure class="chart-figure">
+  <!-- MAIN CHARTS ROW 1 -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h3 class="h3">GDP over Time</h3><div class="muted">Line</div></div>
       <canvas id="gdpChart" height="140"></canvas>
-      <figcaption id="cap-gdp" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>Inflation over Time</h3><div class="muted">Bar</div></header>
-    <figure class="chart-figure">
-      <canvas id="inflChart" height="140"></canvas>
-      <figcaption id="cap-infl" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>Overlay</h3><div class="muted">GDP & Inflation together</div></header>
-    <figure class="chart-figure">
-      <canvas id="overlayChart" height="140"></canvas>
-      <figcaption id="cap-overlay" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>GDP vs Inflation</h3><div class="muted">Scatter + line</div></header>
-    <figure class="chart-figure">
-      <canvas id="scatterChart" height="140"></canvas>
-      <figcaption id="cap-scatter" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>GDP YoY</h3><div class="muted">Area</div></header>
-    <figure class="chart-figure">
-      <canvas id="yoyChart" height="140"></canvas>
-      <figcaption id="cap-yoy" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>YoY Breakdown</h3><div class="muted">Doughnut</div></header>
-    <figure class="chart-figure">
-      <canvas id="donutChart" height="140"></canvas>
-      <figcaption id="cap-donut" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>Decade Averages</h3><div class="muted">Grouped bar</div></header>
-    <figure class="chart-figure">
-      <canvas id="decadeChart" height="140"></canvas>
-      <figcaption id="cap-decade" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>Rolling Averages (5y)</h3><div class="muted">Smooth trends</div></header>
-    <figure class="chart-figure">
-      <canvas id="rollingChart" height="140"></canvas>
-      <figcaption id="cap-rolling" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>Inflation Distribution</h3><div class="muted">Histogram</div></header>
-    <figure class="chart-figure">
-      <canvas id="histChart" height="140"></canvas>
-      <figcaption id="cap-hist" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>Cumulative GDP Growth</h3><div class="muted">From first year</div></header>
-    <figure class="chart-figure">
-      <canvas id="cumChart" height="140"></canvas>
-      <figcaption id="cap-cum" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<section class="grid-2 charts">
-  <article class="card">
-    <header class="card-head"><h3>Inflation Volatility</h3><div class="muted">Rolling Std (5y)</div></header>
-    <figure class="chart-figure">
-      <canvas id="volChart" height="140"></canvas>
-      <figcaption id="cap-vol" class="figcap"></figcaption>
-    </figure>
-  </article>
-  <article class="card">
-    <header class="card-head"><h3>YoY Scatter</h3><div class="muted">GDP YoY vs Inflation YoY</div></header>
-    <figure class="chart-figure">
-      <canvas id="yoyScatterChart" height="140"></canvas>
-      <figcaption id="cap-yoysc" class="figcap"></figcaption>
-    </figure>
-  </article>
-</section>
-
-<!-- Table -->
-<section class="card">
-  <header class="card-head">
-    <h3>Yearly Table</h3>
-    <div class="controls">
-      <input id="tableSearch" class="input" placeholder="Search year / value…" />
-      <label class="check"><input type="checkbox" id="showGDP" checked /> <span>GDP</span></label>
-      <label class="check"><input type="checkbox" id="showInfl" checked /> <span>Inflation</span></label>
+      <div class="figcap" id="cap-gdp">—</div>
     </div>
-  </header>
-  <div class="table-wrap">
-    <table class="table" id="dataTable">
-      <thead>
-        <tr><th>#</th><th>Year</th><th class="col-gdp">GDP</th><th class="col-infl">Inflation</th></tr>
-      </thead>
-      <tbody id="tableBody"></tbody>
-    </table>
-  </div>
-  <div class="pager">
-    <button class="btn ghost" id="prevPage">Prev</button>
-    <span id="pageInfo" class="muted">—</span>
-    <button class="btn ghost" id="nextPage">Next</button>
-  </div>
-</section>
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Inflation over Time</h3><div class="muted">Bars</div></div>
+      <canvas id="inflChart" height="140"></canvas>
+      <div class="figcap" id="cap-infl">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN CHARTS ROW 2 -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Overlay</h3><div class="muted">GDP & Inflation together</div></div>
+      <canvas id="overlayChart" height="160"></canvas>
+      <div class="figcap" id="cap-overlay">—</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3 class="h3">GDP vs Inflation</h3><div class="muted">Scatter + line</div></div>
+      <canvas id="scatterChart" height="160"></canvas>
+      <div class="figcap" id="cap-scatter">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN CHARTS ROW 3 -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h3 class="h3">GDP YoY</h3><div class="muted">Area</div></div>
+      <canvas id="yoyChart" height="160"></canvas>
+      <div class="figcap" id="cap-yoy">—</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3 class="h3">YoY Breakdown</h3><div class="muted">Doughnut</div></div>
+      <canvas id="donutChart" height="160"></canvas>
+      <div class="figcap" id="cap-donut">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN CHARTS ROW 4 -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Rolling Averages (5y)</h3><div class="muted">Smooth trends</div></div>
+      <canvas id="rollingChart" height="160"></canvas>
+      <div class="figcap" id="cap-rolling">—</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Inflation Histogram</h3><div class="muted">Distribution</div></div>
+      <canvas id="histChart" height="160"></canvas>
+      <div class="figcap" id="cap-hist">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN CHARTS ROW 5 -->
+  <section class="grid-2">
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Cumulative GDP Path</h3><div class="muted">Running sum</div></div>
+      <canvas id="cumChart" height="160"></canvas>
+      <div class="figcap" id="cap-cum">—</div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h3 class="h3">Inflation Volatility</h3><div class="muted">Rolling Std (5y)</div></div>
+      <canvas id="volChart" height="160"></canvas>
+      <div class="figcap" id="cap-vol">Inflation volatility (5-year rolling std).</div>
+    </div>
+  </section>
+
+  <!-- OPTIONAL: YoY scatter -->
+  <section class="card">
+    <div class="card-head"><h3 class="h3">YoY Scatter</h3><div class="muted">GDP YoY vs Inflation YoY</div></div>
+    <canvas id="yoyScatterChart" height="150"></canvas>
+    <div class="figcap" id="cap-yoysc">YoY scatter: x = Δinflation, y = ΔGDP.</div>
+  </section>
 {% endblock %}

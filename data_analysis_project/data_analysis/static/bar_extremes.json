@@ -1,0 +1,20 @@
+{
+    "labels": [
+        "Best GDP\n(1964, Pre-Apartheid)",
+        "Worst GDP\n(2020, Post-Apartheid)",
+        "Best Inflation\n(2004, Post-Apartheid)",
+        "Worst Inflation\n(1986, Pre-Apartheid)"
+    ],
+    "values": [
+        7.939608644806768,
+        -6.1689177146757,
+        -0.692030271024132,
+        18.6549189263064
+    ],
+    "colors": [
+        "#66b3ff",
+        "#ff9999",
+        "#99ff99",
+        "#ffcc99"
+    ]
+}

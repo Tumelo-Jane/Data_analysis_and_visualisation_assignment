@@ -1,0 +1,65 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{% static 'css/dashboard.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.min.js"></script>
+
+</head>
+
+<body>
+
+    <div class="row main-row">
+        <!-- Sidebar -->
+        <div class="col-2 sidenav shadow-sm p-3 bg-light">
+            <h3 class="heading mb-4">
+                <i class="bi bi-bar-chart-fill barfill me-2"></i> Trends
+            </h3>
+            <div class="row mb-3 dash sidenav-links">
+                <a href="" class="nav-link">
+                    <i class="bi bi-speedometer2 me-2"></i> Dashboard
+                </a>
+            </div>
+            <div class="row mb-3 sidenav-links">
+                <a href="#description" class="nav-link">
+                    <i class="bi bi-list-check me-2"></i> Overview
+                </a>
+            </div>
+            <div class="row mb-3 sidenav-links">
+                <a href="#stats" class="nav-link">
+                    <i class="bi bi-graph-up me-2"></i> Analytics
+                </a>
+            </div>
+            <div class="row sidenav-links">
+                <a href="#viz" class="nav-link">
+                    <i class="bi bi-bar-chart me-2"></i> Visualization
+                </a>
+            </div>
+        </div>
+
+        <div class="col-10 main-body ">
+            <nav class="navbar shadow-sm p-3 mb-5 ">
+                <div class="container-fluid">
+                    <form class="d-flex" role="search">
+                        <input class="form-control search me-2" type="search" placeholder="Search"
+                            aria-label="Search" />
+                        <button class="btn btn-outline-primary" type="submit">Search</button>
+                    </form>
+                </div>
+            </nav>
+            <div class="mid-content">
+                {% block content %}
+
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

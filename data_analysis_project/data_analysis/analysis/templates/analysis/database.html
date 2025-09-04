@@ -1,0 +1,283 @@
+
+
+{% load dict_extras %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Database Dashboard</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+  <style>
+    .kpi { display:grid; grid-template-columns: repeat(4,1fr); gap:1rem; }
+    .kpi .card { padding:1rem; border:1px solid #eee; border-radius:12px; }
+    .grid-2 { display:grid; grid-template-columns: 1fr 1fr; gap:1rem; }
+    .table-scroll { max-height: 420px; overflow:auto; }
+    .actions { white-space:nowrap; }
+    .badge { padding: .2rem .5rem; border-radius: .5rem; background:#eef; }
+  </style>
+</head>
+<body>
+<main class="container">
+
+  <h2>Economic Database</h2>
+
+  {% if messages %}
+    <article>
+      {% for m in messages %}
+        <p class="{{ m.tags }}">{{ m }}</p>
+      {% endfor %}
+    </article>
+  {% endif %}
+
+  <!-- Search by year -->
+  <form method="get" class="grid">
+    <label>
+      Search Year
+      <input type="number" name="year" placeholder="e.g. 2008" value="{{ year_q }}">
+    </label>
+    <button type="submit" style="align-self:end;">Search</button>
+    <a class="secondary" href=".">Clear</a>
+  </form>
+
+  {% if search_row %}
+  <p>
+    Result: <strong>{{ search_row.year }}</strong> —
+    GDP: {{ search_row.gdp_zar_bn }} |
+    Inflation: {{ search_row.inflation_rate }} |
+    Era: <span class="badge">{{ search_row.era }}</span>
+  </p>
+  {% endif %}
+
+  <!-- KPI tiles -->
+  <section class="kpi">
+    {% for row in kpi_era %}
+    <article class="card">
+      <h5>{{ row.era }}</h5>
+      <ul>
+        <li><strong>Years:</strong> {{ row.years_count }}</li>
+        <li><strong>Mean GDP:</strong> {{ row.mean_gdp|floatformat:2 }}</li>
+        <li><strong>Mean Inflation:</strong> {{ row.mean_inflation|floatformat:2 }}%</li>
+        <li><strong>Best GDP:</strong> {{ row.best_gdp|floatformat:2 }}</li>
+        <li><strong>Worst GDP:</strong> {{ row.worst_gdp|floatformat:2 }}</li>
+      </ul>
+    </article>
+    {% endfor %}
+  </section>
+
+  <hr/>
+
+  <!-- Import / Export -->
+  <h4>Import / Export</h4>
+  <div class="grid-2">
+    <article>
+      <h6>Export CSV</h6>
+      <ul>
+        <li><a href="{% url 'export_economic_csv' %}">economic_indicators.csv</a></li>
+        <li><a href="{% url 'export_volatility_csv' %}">volatility_analysis.csv</a></li>
+        <li><a href="{% url 'export_brics_csv' %}">brics_comparison.csv</a></li>
+        <li><a href="{% url 'export_stats_csv' %}">statistical_summary.csv</a></li>
+        <li><a href="{% url 'export_performance_summary_csv' %}">performance_summary.csv</a></li>
+      </ul>
+    </article>
+
+    <article>
+      <h6>Import CSV</h6>
+      <form method="post" action="{% url 'import_csv' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <label>Target table
+          <select name="target_model" required>
+            <option value="economic">Economic Indicators</option>
+            <option value="volatility">Volatility Analysis</option>
+            <option value="brics">BRICS Comparison</option>
+            <option value="stats">Statistical Summary</option>
+          </select>
+        </label>
+        <label>CSV file
+          <input type="file" name="csv_file" accept=".csv" required />
+        </label>
+        <small>
+          economic: year,gdp_zar_bn,inflation_rate,gdp_yoy_change,inflation_yoy_change[,era]
+        </small>
+        <button type="submit">Import CSV</button>
+      </form>
+    </article>
+  </div>
+
+  <hr/>
+
+  <!-- Add new indicator -->
+  <details>
+    <summary><strong>Add Economic Indicator</strong></summary>
+    <form method="post" action="{% url 'indicator_add' %}">
+      {% csrf_token %}
+      <div class="grid">
+        <label>Year {{ form.year }}</label>
+        <label>GDP (ZAR bn) {{ form.gdp_zar_bn }}</label>
+        <label>Inflation (%) {{ form.inflation_rate }}</label>
+        <label>GDP YoY {{ form.gdp_yoy_change }}</label>
+        <label>Infl YoY {{ form.inflation_yoy_change }}</label>
+        <label>Era {{ form.era }}</label>
+      </div>
+      <button type="submit">Add</button>
+    </form>
+  </details>
+
+  <hr/>
+
+  <!-- Economic Indicators table -->
+  <h4>Economic Indicators</h4>
+  <div class="table-scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>Year</th><th>GDP (ZAR bn)</th><th>Inflation %</th>
+          <th>GDP YoY</th><th>Infl YoY</th><th>Era</th>
+          <th>Growth</th><th>Inflation Cat</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ei in indicators %}
+        {% with label=perf|dictget:ei.year %}
+        <tr>
+          <td>{{ ei.year }}</td>
+          <td>{{ ei.gdp_zar_bn }}</td>
+          <td>{{ ei.inflation_rate }}</td>
+          <td>{{ ei.gdp_yoy_change }}</td>
+          <td>{{ ei.inflation_yoy_change }}</td>
+          <td><span class="badge">{{ ei.era }}</span></td>
+          <td>{{ label|first }}</td>
+          <td>{{ label|last }}</td>
+          <td class="actions">
+            <a href="{% url 'indicator_edit' ei.year %}">Edit</a>
+            <form method="post" action="{% url 'indicator_delete' ei.year %}" style="display:inline;">
+              {% csrf_token %}
+              <button type="submit" onclick="return confirm('Delete year {{ ei.year }}?')">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <hr/>
+
+  <!-- Volatility -->
+  <h4>High-Volatility Years</h4>
+  <table>
+    <thead>
+      <tr><th>Year</th><th>GDP YoY</th><th>Infl YoY</th><th>Notes</th></tr>
+    </thead>
+    <tbody>
+      {% for v in volatility %}
+      <tr><td>{{ v.year }}</td><td>{{ v.gdp_yoy_change }}</td><td>{{ v.inflation_yoy_change }}</td><td>{{ v.notes }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr/>
+
+  <!-- BRICS -->
+  <h4>BRICS Comparison</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Period</th><th>Start</th><th>End</th>
+        <th>Mean GDP</th><th>Median Inflation</th>
+        <th>GDP Min</th><th>GDP Max</th><th>Inflation Mode</th><th>Insights</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for b in brics %}
+      <tr>
+        <td>{{ b.period_type }}</td>
+        <td>{{ b.start_year }}</td>
+        <td>{{ b.end_year }}</td>
+        <td>{{ b.mean_gdp_zar_bn }}</td>
+        <td>{{ b.median_inflation }}</td>
+        <td>{{ b.gdp_range_min }}</td>
+        <td>{{ b.gdp_range_max }}</td>
+        <td>{{ b.inflation_mode }}</td>
+        <td>{{ b.insights }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr/>
+
+  <!-- Statistical Summary -->
+  <h4>Statistical Summary</h4>
+  <table>
+    <thead>
+      <tr>
+        <th>Indicator</th><th>Mean</th><th>Median</th><th>Std Dev</th>
+        <th>Min</th><th>Max</th><th>Sample Size</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in stats %}
+      <tr>
+        <td>{{ s.indicator }}</td>
+        <td>{{ s.mean_value }}</td>
+        <td>{{ s.median_value }}</td>
+        <td>{{ s.std_dev }}</td>
+        <td>{{ s.min_value }}</td>
+        <td>{{ s.max_value }}</td>
+        <td>{{ s.sample_size }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr/>
+
+  <!-- Best / Worst -->
+  <h4>Best & Worst GDP Years</h4>
+  <table>
+    <thead><tr><th>Type</th><th>Year</th><th>GDP</th><th>Inflation</th><th>Era</th></tr></thead>
+    <tbody>
+      {% for r in best %}
+      <tr><td>Best GDP</td><td>{{ r.year }}</td><td>{{ r.gdp_zar_bn }}</td><td>{{ r.inflation_rate }}</td><td>{{ r.era }}</td></tr>
+      {% endfor %}
+      {% for r in worst %}
+      <tr><td>Worst GDP</td><td>{{ r.year }}</td><td>{{ r.gdp_zar_bn }}</td><td>{{ r.inflation_rate }}</td><td>{{ r.era }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <hr/>
+
+  <h4>Recent Trends (Since 2013)</h4>
+  <table>
+    <thead><tr><th>Year</th><th>GDP</th><th>Inflation</th><th>GDP YoY</th></tr></thead>
+    <tbody>
+      {% for r in recent %}
+      <tr><td>{{ r.year }}</td><td>{{ r.gdp_zar_bn }}</td><td>{{ r.inflation_rate }}</td><td>{{ r.gdp_yoy_change }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h4>Average by Era</h4>
+  <table>
+    <thead><tr><th>Era</th><th>Avg GDP</th><th>Avg Inflation</th></tr></thead>
+    <tbody>
+      {% for r in avg_by_era %}
+      <tr><td>{{ r.era }}</td><td>{{ r.avg_gdp|floatformat:2 }}</td><td>{{ r.avg_inflation|floatformat:2 }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+</main>
+</body>
+</html>
+
+
+
+
+
+
+
+

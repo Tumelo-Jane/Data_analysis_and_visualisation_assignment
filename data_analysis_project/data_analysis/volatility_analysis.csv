@@ -1,0 +1,6 @@
+year,gdp_yoy_change,inflation_yoy_change,volatility_flag,is_outlier,notes
+2008,-1.23,2.34,True,True,Global Financial Crisis impact
+2020,-2.45,3.21,True,True,COVID-19 pandemic impact
+2016,0.56,-1.78,False,False,Stable growth period
+1985,-2.10,4.20,True,True,Apartheid era instability
+2007,5.60,1.80,False,False,Pre-crisis peak

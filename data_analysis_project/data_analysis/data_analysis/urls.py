@@ -1,3 +1,5 @@
+
+
 """
 URL configuration for data_analysis project.
 
@@ -14,10 +16,13 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+# data_analysis/urls.py
 from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('analysis.urls'))
+    # Include your app once at root; database routes still live under /database/ via analysis/urls.py
+    path('', include('analysis.urls')),
 ]
+

@@ -1,0 +1,258 @@
+
+{% load dict_extras %}
+
+<!-- Header + search -->
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+  <h3 class="mb-0">Database (SA Economy)</h3>
+  <form method="get" class="d-flex gap-2">
+    <input type="number" name="year" class="form-control" placeholder="Search year e.g. 2008" value="{{ year_q }}">
+    <button type="submit" class="btn btn-primary">Search</button>
+    <a class="btn btn-link" href=".">Clear</a>
+  </form>
+</div>
+
+{% if search_row %}
+  <div class="alert alert-info py-2">
+    <strong>{{ search_row.year }}</strong> — GDP: {{ search_row.gdp_zar_bn }} |
+    Inflation: {{ search_row.inflation_rate }} |
+    Era: <span class="badge rounded-pill bg-light text-body">{{ search_row.era }}</span>
+  </div>
+{% endif %}
+
+<!-- KPI tiles -->
+<div class="row g-4 mb-4">
+  {% for row in kpi_era %}
+  <div class="col-12 col-md-6 col-xl-3">
+    <div class="card border-0 shadow-sm bg-white h-100">
+      <div class="card-body">
+        <h5 class="card-title mb-3">{{ row.era }}</h5>
+        <ul class="mb-0">
+          <li><strong>Years:</strong> {{ row.years_count }}</li>
+          <li><strong>Mean GDP:</strong> {{ row.mean_gdp|floatformat:2 }}</li>
+          <li><strong>Mean Inflation:</strong> {{ row.mean_inflation|floatformat:2 }}%</li>
+          <li><strong>Best GDP:</strong> {{ row.best_gdp|floatformat:2 }}</li>
+          <li><strong>Worst GDP:</strong> {{ row.worst_gdp|floatformat:2 }}</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Export / Import -->
+<div class="row g-4 mb-4">
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm bg-white h-100">
+      <div class="card-body">
+        <h5 class="card-title">Export CSV</h5>
+        <ul class="mb-0">
+          <li><a href="{% url 'export_economic_csv' %}">economic_indicators.csv</a></li>
+          <li><a href="{% url 'export_volatility_csv' %}">volatility_analysis.csv</a></li>
+          <li><a href="{% url 'export_brics_csv' %}">brics_comparison.csv</a></li>
+          <li><a href="{% url 'export_stats_csv' %}">statistical_summary.csv</a></li>
+          <li><a href="{% url 'export_performance_summary_csv' %}">performance_summary.csv</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card border-0 shadow-sm bg-white h-100">
+      <div class="card-body">
+        <h5 class="card-title">Import CSV</h5>
+        <form method="post" action="{% url 'import_csv' %}" enctype="multipart/form-data" class="row g-3">
+          {% csrf_token %}
+          <div class="col-12">
+            <label class="form-label">Target</label>
+            <select name="target_model" required class="form-select">
+              <option value="economic">Economic Indicators</option>
+              <option value="volatility">Volatility Analysis</option>
+              <option value="brics">BRICS Comparison</option>
+              <option value="stats">Statistical Summary</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label">CSV file</label>
+            <input type="file" name="csv_file" accept=".csv" required class="form-control" />
+            <div class="form-text">economic: year,gdp_zar_bn,inflation_rate,gdp_yoy_change,inflation_yoy_change[,era]</div>
+          </div>
+          <div class="col-12">
+            <button type="submit" class="btn btn-primary">Import CSV</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add new -->
+<div class="accordion mb-4" id="addIndicator">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingAdd">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAdd">
+        Add Economic Indicator
+      </button>
+    </h2>
+    <div id="collapseAdd" class="accordion-collapse collapse" data-bs-parent="#addIndicator">
+      <div class="accordion-body">
+        <form method="post" action="{% url 'indicator_add' %}" class="row g-3">
+          {% csrf_token %}
+          <div class="col-6 col-md-4"><label class="form-label">Year</label>{{ form.year }}</div>
+          <div class="col-6 col-md-4"><label class="form-label">GDP (ZAR bn)</label>{{ form.gdp_zar_bn }}</div>
+          <div class="col-6 col-md-4"><label class="form-label">Inflation (%)</label>{{ form.inflation_rate }}</div>
+          <div class="col-6 col-md-4"><label class="form-label">GDP YoY</label>{{ form.gdp_yoy_change }}</div>
+          <div class="col-6 col-md-4"><label class="form-label">Infl YoY</label>{{ form.inflation_yoy_change }}</div>
+          <div class="col-6 col-md-4"><label class="form-label">Era</label>{{ form.era }}</div>
+          <div class="col-12"><button type="submit" class="btn btn-success">Add</button></div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Economic Indicators -->
+<h5 class="mb-3">Economic Indicators</h5>
+<div class="card border-0 shadow-sm bg-white mb-4">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Year</th><th>GDP (ZAR bn)</th><th>Inflation %</th>
+          <th>GDP YoY</th><th>Infl YoY</th><th>Era</th>
+          <th>Growth</th><th>Inflation Cat</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ei in indicators %}
+          {% with label=perf|dictget:ei.year %}
+          <tr>
+            <td>{{ ei.year }}</td>
+            <td>{{ ei.gdp_zar_bn }}</td>
+            <td>{{ ei.inflation_rate }}</td>
+            <td>{{ ei.gdp_yoy_change }}</td>
+            <td>{{ ei.inflation_yoy_change }}</td>
+            <td><span class="badge rounded-pill bg-light text-body">{{ ei.era }}</span></td>
+            <td>{{ label|first }}</td>
+            <td>{{ label|last }}</td>
+            <td class="text-nowrap">
+              <a href="{% url 'indicator_edit' ei.year %}" class="btn btn-sm btn-outline-secondary">Edit</a>
+              <form method="post" action="{% url 'indicator_delete' ei.year %}" class="d-inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete year {{ ei.year }}?')">Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endwith %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- High-Volatility Years -->
+<h5 class="mb-3">High-Volatility Years</h5>
+<div class="card border-0 shadow-sm bg-white mb-4">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr><th>Year</th><th>GDP YoY</th><th>Infl YoY</th><th>Notes</th></tr>
+      </thead>
+      <tbody>
+        {% for v in volatility %}
+        <tr><td>{{ v.year }}</td><td>{{ v.gdp_yoy_change }}</td><td>{{ v.inflation_yoy_change }}</td><td>{{ v.notes }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- BRICS -->
+<h5 class="mb-3">BRICS Comparison</h5>
+<div class="card border-0 shadow-sm bg-white mb-4">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Period</th><th>Start</th><th>End</th>
+          <th>Mean GDP</th><th>Median Inflation</th>
+          <th>GDP Min</th><th>GDP Max</th><th>Inflation Mode</th><th>Insights</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in brics %}
+        <tr>
+          <td>{{ b.period_type }}</td>
+          <td>{{ b.start_year }}</td>
+          <td>{{ b.end_year }}</td>
+          <td>{{ b.mean_gdp_zar_bn }}</td>
+          <td>{{ b.median_inflation }}</td>
+          <td>{{ b.gdp_range_min }}</td>
+          <td>{{ b.gdp_range_max }}</td>
+          <td>{{ b.inflation_mode }}</td>
+          <td>{{ b.insights }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Stats -->
+<h5 class="mb-3">Statistical Summary</h5>
+<div class="card border-0 shadow-sm bg-white mb-4">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>Indicator</th><th>Mean</th><th>Median</th><th>Std Dev</th>
+          <th>Min</th><th>Max</th><th>Sample Size</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in stats %}
+        <tr>
+          <td>{{ s.indicator }}</td>
+          <td>{{ s.mean_value }}</td>
+          <td>{{ s.median_value }}</td>
+          <td>{{ s.std_dev }}</td>
+          <td>{{ s.min_value }}</td>
+          <td>{{ s.max_value }}</td>
+          <td>{{ s.sample_size }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Recent Trends -->
+<h5 class="mb-3">Recent Trends (Since 2013)</h5>
+<div class="card border-0 shadow-sm bg-white mb-4">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th>Year</th><th>GDP</th><th>Inflation</th><th>GDP YoY</th></tr></thead>
+      <tbody>
+        {% for r in recent %}
+        <tr><td>{{ r.year }}</td><td>{{ r.gdp_zar_bn }}</td><td>{{ r.inflation_rate }}</td><td>{{ r.gdp_yoy_change }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Average by Era -->
+<h5 class="mb-3">Average by Era</h5>
+<div class="card border-0 shadow-sm bg-white">
+  <div class="card-body table-responsive">
+    <table class="table table-striped table-hover align-middle mb-0">
+      <thead class="table-light"><tr><th>Era</th><th>Avg GDP</th><th>Avg Inflation</th></tr></thead>
+      <tbody>
+        {% for r in avg_by_era %}
+        <tr><td>{{ r.era }}</td><td>{{ r.avg_gdp|floatformat:2 }}</td><td>{{ r.avg_inflation|floatformat:2 }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+

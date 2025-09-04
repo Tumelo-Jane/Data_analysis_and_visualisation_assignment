@@ -15,6 +15,17 @@ Phemelo Martin Mashome – 202344231
 
 Ashley Van Rooyen – 202103070   
 
+# Python
+- The juypter notebook for the assignemnt is under python_analytics in Falang.ipynb
+- The datasets are under python_analytics
+  
+# Django Configuration
 
-
+cd data_analysis_project
+- create a virtual environment ( py -m venv env)
+- activate the scripts ( .\env\Scripts\activate
+- install django ( pip install django)
+- to install the chart ( pip install chart.js)
+- cd data_analysis
+-to run the project( py manage.py runserver )
 

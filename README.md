@@ -23,7 +23,7 @@ Ashley Van Rooyen – 202103070
 
 cd data_analysis_project
 - create a virtual environment ( py -m venv env)
-- activate the scripts ( .\env\Scripts\activate
+- activate the scripts ( .\env\Scripts\activate)
 - install django ( pip install django)
 - to install the chart ( pip install chart.js)
 - cd data_analysis
